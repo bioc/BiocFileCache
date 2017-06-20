@@ -1,6 +1,4 @@
 #' @import methods
-#' @import RSQLite
-#' @import dplyr
 #' @import httr
 #' @import rappdirs
 .BiocFileCacheBase = setClass(
@@ -98,7 +96,7 @@ setGeneric("bfccache", function(x) standardGeneric("bfccache"))
 #' @exportMethod bfccache
 setMethod("bfccache", "BiocFileCacheBase", function(x) x@cache)
 
-#' @describeIn BiocFileCache Get the number of object in the file
+#' @describeIn BiocFileCache Get the number of objects in the file
 #'     cache.
 #' @return For 'length': integer(1) Number of objects in the file
 #'     cache.
@@ -108,15 +106,18 @@ setMethod("bfccache", "BiocFileCacheBase", function(x) x@cache)
 #' @exportMethod length
 setMethod("length", "BiocFileCacheBase", function(x) length(bfcrid(x)))
 
+#' @rdname BiocFileCache-class
+#' @aliases bfcrid
 #' @export
 setGeneric("bfcrid", function(x) standardGeneric("bfcrid"))
 
-#' @describeIn BiocFileCache Get the rids of the object
+#' @describeIn BiocFileCache Get the rids of the object.
+#' @aliases bfcrid,BiocFileCacheReadOnly-method
 #' @exportMethod bfcrid
 setMethod("bfcrid", "BiocFileCacheReadOnly", function(x) x@rid)
 
-#' @describeIn BiocFileCache Get the rids of the object
-#' @aliases bfcrid
+#' @rdname BiocFileCache-class
+#' @aliases bfcrid,BiocFileCache-method
 #' @exportMethod bfcrid
 setMethod("bfcrid", "BiocFileCache", function(x) .get_all_rids(x))
 
@@ -133,7 +134,8 @@ setMethod("[", c("BiocFileCache", "character", "missing"),
     .BiocFileCacheReadOnly(x, rid=as.character(i))
 })
 
-#' @describeIn BiocFileCache Subset a BiocFileCache object
+#' @rdname BiocFileCache-class
+#' @aliases [,BiocFileCacheReadOnly,character,missing-method
 #' @exportMethod [
 setMethod("[", c("BiocFileCacheReadOnly", "character", "missing"),
     function(x, i, j, ..., drop=TRUE)
@@ -144,7 +146,8 @@ setMethod("[", c("BiocFileCacheReadOnly", "character", "missing"),
     initialize(x, rid=as.character(i))
 })
 
-#' @describeIn BiocFileCache Subset a BiocFileCache object
+#' @rdname BiocFileCache-class
+#' @aliases [,BiocFileCache,missing,missing-method
 #' @exportMethod [
 setMethod("[", c("BiocFileCache", "missing", "missing"),
     function(x, i, j, ..., drop=TRUE)
@@ -154,7 +157,8 @@ setMethod("[", c("BiocFileCache", "missing", "missing"),
     .BiocFileCacheReadOnly(x, rid=bfcrid(x))
 })
 
-#' @describeIn BiocFileCache Subset a BiocFileCache object
+#' @rdname BiocFileCache-class
+#' @aliases [,BiocFileCacheReadOnly,missing,missing-method
 #' @exportMethod [
 setMethod("[", c("BiocFileCacheReadOnly", "missing", "missing"),
     function(x, i, j, ..., drop=TRUE)
@@ -200,7 +204,7 @@ setReplaceMethod("[[", c("BiocFileCache", "character", "missing", "character"),
 
 #' @export
 setGeneric("bfcnew",
-    function(x, rname, rtype=c("relative", "local"))
+    function(x, rname, rtype=c("relative", "local"), ext=NA_character_)
     standardGeneric("bfcnew"),
     signature="x"
 )
@@ -208,6 +212,9 @@ setGeneric("bfcnew",
 #' @describeIn BiocFileCache Add a resource to the database
 #' @param rname character(1) Name of object in file cache. For
 #'     'bfcupdate' a character vector of replacement rnames.
+#' @param ext character(1) A file extension to add to the local
+#'     copy of the file (e.g., \sQuote{sqlite}, \sQuote{txt},
+#'     \sQuote{tar.gz}).
 #' @return For 'bfcnew': named character(1), the path to save your
 #'     object / file.  The name of the return value is the unique rid
 #'     for the resource.
@@ -217,12 +224,13 @@ setGeneric("bfcnew",
 #' @aliases bfcnew
 #' @exportMethod bfcnew
 setMethod("bfcnew", "BiocFileCache",
-    function(x, rname, rtype=c("relative", "local"))
+    function(x, rname, rtype=c("relative", "local"), ext=NA_character_)
 {
     stopifnot(length(rname) == 1L, is.character(rname), !is.na(rname))
+    stopifnot(length(ext) == 1L, is.character(ext))
     rtype <- match.arg(rtype)
 
-    rid <- .sql_new_resource(x, rname, rtype, NA_character_)
+    rid <- .sql_new_resource(x, rname, rtype, NA_character_, ext)
     rpath <- .sql_get_rpath(x, rid)
     setNames(rpath, rid)
 })
@@ -332,15 +340,6 @@ setMethod("bfcinfo", "BiocFileCacheBase",
 
     .sql_get_resource_table(x, rids)
 })
-
-#' @export
-dim.tbl_bfc <-
-    function(x)
-{
-    result <- NextMethod("dim")
-    result[1] <- .sql_get_nrows(x)
-    result
-}
 
 setOldClass("tbl_bfc")
 
@@ -530,6 +529,33 @@ setMethod("bfcquery", "BiocFileCacheBase",
 
     rids <- intersect(.sql_query_resource(x, query), bfcrid(x))
     .sql_get_resource_table(x, rids)
+})
+
+#' @export
+setGeneric("bfccount", function(x) standardGeneric("bfccount"))
+
+#' @describeIn BiocFileCache Get the number of objects in the file
+#'     cache or query.
+#' @return For 'bfccount': integer(1) Number of objects in the cache
+#'     or query.
+#' @examples
+#' bfccount(bfc0)
+#' bfccount(bfcquery(bfc0, "test"))
+#' @aliases bfccount
+#' @exportMethod bfccount
+setMethod("bfccount", "BiocFileCacheBase",
+    function(x)
+{
+    bfccount(bfcinfo(x))
+})
+
+#' @rdname BiocFileCache-class
+#' @aliases bfccount,tbl_bfc-method
+#' @exportMethod bfccount
+setMethod("bfccount", "tbl_bfc",
+    function(x)
+{
+    .sql_get_nrows(x)
 })
 
 #' @export
@@ -759,7 +785,7 @@ setMethod("show", "BiocFileCacheBase",
 {
     cat("class: ", class(object), "\n",
         "bfccache: ", bfccache(object), "\n",
-        "length: ", length(object), "\n",
+        "bfccount: ", bfccount(object), "\n",
         "For more information see: bfcinfo() or bfcquery()\n",
         sep="")
 })

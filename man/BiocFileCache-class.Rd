@@ -7,9 +7,9 @@
 \alias{bfccache,BiocFileCacheBase-method}
 \alias{bfccache}
 \alias{length,BiocFileCacheBase-method}
+\alias{bfcrid}
 \alias{bfcrid,BiocFileCacheReadOnly-method}
 \alias{bfcrid,BiocFileCache-method}
-\alias{bfcrid}
 \alias{[,BiocFileCache,character,missing-method}
 \alias{[,BiocFileCacheReadOnly,character,missing-method}
 \alias{[,BiocFileCache,missing,missing-method}
@@ -31,6 +31,9 @@
 \alias{bfcupdate}
 \alias{bfcquery,BiocFileCacheBase-method}
 \alias{bfcquery}
+\alias{bfccount,BiocFileCacheBase-method}
+\alias{bfccount}
+\alias{bfccount,tbl_bfc-method}
 \alias{bfcneedsupdate,BiocFileCacheBase-method}
 \alias{bfcneedsupdate}
 \alias{bfcdownload,BiocFileCache-method}
@@ -52,6 +55,8 @@ BiocFileCache(cache = user_cache_dir(appname = "BiocFileCache"))
 
 \S4method{length}{BiocFileCacheBase}(x)
 
+bfcrid(x)
+
 \S4method{bfcrid}{BiocFileCacheReadOnly}(x)
 
 \S4method{bfcrid}{BiocFileCache}(x)
@@ -70,7 +75,8 @@ BiocFileCache(cache = user_cache_dir(appname = "BiocFileCache"))
 \S4method{[[}{BiocFileCache,character,missing,character}(x, i, j,
   ...) <- value
 
-\S4method{bfcnew}{BiocFileCache}(x, rname, rtype = c("relative", "local"))
+\S4method{bfcnew}{BiocFileCache}(x, rname, rtype = c("relative", "local"),
+  ext = NA_character_)
 
 \S4method{bfcadd}{BiocFileCache}(x, rname, fpath = rname, rtype = c("auto",
   "relative", "local", "web"), action = c("copy", "move", "asis"),
@@ -88,6 +94,10 @@ BiocFileCache(cache = user_cache_dir(appname = "BiocFileCache"))
   fpath = NULL, proxy = "")
 
 \S4method{bfcquery}{BiocFileCacheBase}(x, query)
+
+\S4method{bfccount}{BiocFileCacheBase}(x)
+
+\S4method{bfccount}{tbl_bfc}(x)
 
 \S4method{bfcneedsupdate}{BiocFileCacheBase}(x, rids)
 
@@ -129,6 +139,10 @@ if the resource is a local file, a relative path in the cache,
 or a web resource. For \code{bfcnew}: local or relative are
 only options. For \code{bfcadd}, the default 'auto' creates
 relative or web paths, based on the path prefix.}
+
+\item{ext}{character(1) A file extension to add to the local
+copy of the file (e.g., \sQuote{sqlite}, \sQuote{txt},
+\sQuote{tar.gz}).}
 
 \item{fpath}{For bfcadd(), character(1) path to current file
 location or remote web resource. If none is given, the rname is
@@ -207,6 +221,9 @@ For 'bfcquery': A \code{bfc_tbl} of current resources in
     patterns. A tbl with zero rows is returned when no resources
     match the query.
 
+For 'bfccount': integer(1) Number of objects in the cache
+    or query.
+
 For 'bfcneedsupdate': named logical vector if resource
     needs to be updated. The name is the resource
     'rid'. \code{TRUE}: fpath \code{modified} time of web resource
@@ -276,20 +293,12 @@ information:
 \itemize{
 \item \code{bfccache}: Get the location of the on-disk cache.
 
-\item \code{length}: Get the number of object in the file
+\item \code{length}: Get the number of objects in the file
 cache.
 
-\item \code{bfcrid}: Get the rids of the object
-
-\item \code{bfcrid}: Get the rids of the object
+\item \code{bfcrid}: Get the rids of the object.
 
 \item \code{[}: Subset a BiocFileCache object.
-
-\item \code{[}: Subset a BiocFileCache object
-
-\item \code{[}: Subset a BiocFileCache object
-
-\item \code{[}: Subset a BiocFileCache object
 
 \item \code{[[}: Get a file path for select resources from
 the cache.
@@ -314,6 +323,9 @@ add it to the cache with 'bfcadd'
 \item \code{bfcupdate}: Update a resource in the cache
 
 \item \code{bfcquery}: query resource
+
+\item \code{bfccount}: Get the number of objects in the file
+cache or query.
 
 \item \code{bfcneedsupdate}: check if a resource needs to be updated
 
@@ -365,6 +377,8 @@ bfcupdate(bfc0, rid3, rpath=fl3, rname="NewRname")
 bfc0[[rid3]] = fl1
 bfcupdate(bfc0, "BFC5", fpath="http://google.com")
 bfcquery(bfc0, "test")
+bfccount(bfc0)
+bfccount(bfcquery(bfc0, "test"))
 bfcneedsupdate(bfc0, "BFC5")
 bfcdownload(bfc0, "BFC5")
 bfcremove(bfc0, rid3)
